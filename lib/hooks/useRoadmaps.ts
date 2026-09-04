@@ -74,16 +74,36 @@ export function useRoadmaps() {
       color: params.color || "#0A0A0A",
       status: "active",
     }
-    if (isSupabase && supabase && userId) {
-      const { error } = await supabase.from("roadmaps").insert({ user_id: userId, ...payload })
+    // Ensure we have userId even if state not yet set
+    let uid = userId
+    if (!uid && supabase) {
+      const { data: { user } } = await supabase.auth.getUser()
+      uid = user?.id ?? null
+      if (uid) setUserId(uid)
+    }
+    if (isSupabase && supabase && uid) {
+      const { error } = await supabase.from("roadmaps").insert({ user_id: uid, ...payload })
       if (error) {
-        console.error("createRoadmap", error.message)
-        // fallback if column missing (migration not run)
-        if (error.code === "42703") {
-          const { error: e2 } = await supabase.from("roadmaps").insert({ user_id: userId, title: params.title.trim(), quarter: params.quarter, status: "active" })
-          if (e2) console.error(e2.message)
+        console.error("createRoadmap", error.message, error.code)
+        const isMissingCol = error.code === "42703" || error.code === "PGRST204" || error.message.includes("Could not find")
+        if (isMissingCol) {
+          // fallback без новых колонок — миграция ещё не запущена
+          const { error: e2 } = await supabase.from("roadmaps").insert({ user_id: uid, title: params.title.trim(), description: params.description?.trim() || null, quarter: params.quarter, color: params.color || "#0A0A0A", status: "active" })
+          if (e2) {
+            console.error("fallback createRoadmap", e2.message)
+            alert("Не удалось создать роадмап: " + e2.message + "\nЗапусти supabase/migration_roadmap_dates.sql")
+            return
+          }
+        } else {
+          alert("Не удалось создать роадмап: " + error.message)
+          return
         }
       }
+      await refresh()
+    } else if (supabase && uid) {
+      // isSupabase false but we have user — try Supabase anyway (fallback mode before)
+      const { error } = await supabase.from("roadmaps").insert({ user_id: uid, title: params.title.trim(), quarter: params.quarter, status: "active", description: params.description?.trim() || null })
+      if (error) console.error(error.message)
       await refresh()
     } else {
       setRoadmaps(r => [...r, {
