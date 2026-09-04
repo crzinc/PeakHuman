@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn, calculatePeakScore, getTodayKey } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { useSupabaseData } from "@/lib/hooks/useSupabaseData"
-import { Plus, Check, Flame, Trash2, LogOut, Sparkles, Moon, Zap, Target, TrendingUp, Calendar, Award, Settings, Download, LayoutGrid, Map } from "lucide-react"
+import { Plus, Check, Flame, Trash2, LogOut, Sparkles, Moon, Zap, Target, TrendingUp, Calendar, Award, Settings, Download, LayoutGrid, Map, Activity } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
 import { motion, AnimatePresence } from "framer-motion"
 import { RitualCards } from "@/components/ritual-cards"
@@ -19,11 +19,11 @@ type DayEntry = { energy: number; sleep: number; focus: number; mood: number; no
 
 const DEFAULT_TITLES = ["Медитация 10 мин", "Тренировка", "Чтение 30 мин", "Без сахара"]
 const TEMPLATES = [
-  { label: "Фокус", habits: ["Глубокая работа 2ч", "Без соцсетей до 12:00", "Чтение 30 мин"] },
-  { label: "Тело", habits: ["Тренировка", "10k шагов", "Без сахара"] },
-  { label: "Разум", habits: ["Медитация 10 мин", "Дневник", "Чтение 30 мин"] },
-  { label: "База", habits: DEFAULT_TITLES },
-]
+  { id: "focus", label: "Фокус", desc: "Глубокая работа", icon: Target, color: "bg-emerald-50 border-emerald-200", habits: ["Глубокая работа 2ч", "Без соцсетей до 12:00", "Чтение 30 мин"] },
+  { id: "body", label: "Тело", icon: Zap, color: "bg-amber-50 border-amber-200", desc: "Энергия и сила", habits: ["Тренировка", "10k шагов", "Без сахара"] },
+  { id: "mind", label: "Разум", icon: Sparkles, color: "bg-indigo-50 border-indigo-200", desc: "Ясность ума", habits: ["Медитация 10 мин", "Дневник", "Чтение 30 мин"] },
+  { id: "base", label: "База", icon: Activity, color: "bg-zinc-50 border-zinc-200", desc: "Стартовый набор", habits: DEFAULT_TITLES },
+] as const
 
 const STORAGE = { habits: "peakhuman:habits", metrics: "peakhuman:metrics", logs: "peakhuman:logs" }
 function load<T>(k: string, f: T): T { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : f } catch { return f } }
@@ -54,6 +54,8 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<"today" | "history">("today")
   const [range, setRange] = useState<7 | 30>(7)
   const [saving, setSaving] = useState(false)
+  const [showTemplates, setShowTemplates] = useState(false)
+  const [addingTemplate, setAddingTemplate] = useState<string | null>(null)
 
   // derive habits/metrics/logs depending on auth
   const habits: Habit[] = useMemo(() => {
@@ -179,22 +181,37 @@ export default function DashboardPage() {
   async function addHabit() {
     const t = newHabit.trim()
     if (!t) return
-    if (isAuthed && supabase && user) {
-      await supabase.from("habits").insert({ user_id: user.id, title: t })
-      refresh()
+    const exists = habits.some(h => h.title.trim().toLowerCase() === t.toLowerCase())
+    if (exists) { alert("Такая привычка уже есть"); return }
+    if (supabase && user) {
+      const { error } = await supabase.from("habits").insert({ user_id: user.id, title: t })
+      if (error) { alert(error.message); return }
+      await refresh()
+    } else if (isAuthed && supabase) {
+      // fallback if user not yet loaded
+      return
     } else {
       setLocalHabits(h => [...h, { id: Math.random().toString(36).slice(2, 8), title: t }])
     }
     setNewHabit("")
   }
 
-  async function addTemplate(habitsToAdd: string[]) {
-    if (isAuthed && supabase && user) {
-      for (const title of habitsToAdd) await supabase.from("habits").insert({ user_id: user.id, title })
-      refresh()
+  async function addTemplate(habitsToAdd: string[], templateId: string) {
+    setAddingTemplate(templateId)
+    const normalizedExisting = new Set(habits.map(h => h.title.trim().toLowerCase()))
+    const toAdd = habitsToAdd.filter(t => !normalizedExisting.has(t.trim().toLowerCase()))
+    if (toAdd.length === 0) { alert("Все привычки из шаблона уже добавлены"); setAddingTemplate(null); return }
+    if (supabase && user) {
+      for (const title of toAdd) {
+        const { error } = await supabase.from("habits").insert({ user_id: user.id, title })
+        if (error) console.error(error.message)
+      }
+      await refresh()
     } else {
-      setLocalHabits(h => [...h, ...habitsToAdd.map(t => ({ id: Math.random().toString(36).slice(2, 8), title: t }))])
+      setLocalHabits(h => [...h, ...toAdd.map(t => ({ id: Math.random().toString(36).slice(2, 8), title: t }))])
     }
+    setAddingTemplate(null)
+    setShowTemplates(false)
   }
 
   async function removeHabit(id: string) {
@@ -347,19 +364,42 @@ export default function DashboardPage() {
                   <div className="flex gap-2"><Input placeholder="Новая привычка…" value={newHabit} onChange={e => setNewHabit(e.target.value)} onKeyDown={e => e.key === "Enter" && addHabit()} /><Button onClick={addHabit} size="icon" className="rounded-full shrink-0"><Plus className="h-4 w-4" /></Button></div>
 
                   {habits.length === 0 ? (
-                    <div className="py-2 space-y-3">
-                      <div className="text-sm text-[#57534E] font-medium">Начни с шаблона:</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {TEMPLATES.map(t => (
-                          <button key={t.label} onClick={() => addTemplate(t.habits)} className="text-left rounded-2xl border border-[#E7E5E4] bg-[#F5F5F3] p-3 hover:bg-white transition-colors">
-                            <div className="text-sm font-medium">{t.label}</div>
-                            <div className="text-xs text-[#737373] line-clamp-2">{t.habits.join(" · ")}</div>
-                          </button>
-                        ))}
+                    <div className="py-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-[#0A0A0A]" />
+                        <span className="text-sm font-semibold">Начни с шаблона</span>
+                        <span className="text-xs text-[#A8A29E] hidden sm:inline">выбери набор — добавим за 1 клик</span>
                       </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {TEMPLATES.map(t => {
+                          const Icon = t.icon
+                          const isAdding = addingTemplate === t.id
+                          return (
+                            <motion.button
+                              key={t.id}
+                              whileHover={{ y: -2, scale: 1.01 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => addTemplate([...t.habits], t.id)}
+                              disabled={!!addingTemplate}
+                              className={`text-left rounded-2xl border p-4 flex flex-col gap-2 transition-colors ${t.color} hover:shadow-sm disabled:opacity-60`}
+                            >
+                              <div className="h-8 w-8 rounded-full bg-white border border-[#E7E5E4] flex items-center justify-center">
+                                <Icon className="h-4 w-4 text-[#0A0A0A]" />
+                              </div>
+                              <div className="text-sm font-semibold">{t.label}</div>
+                              <div className="text-xs text-[#737373] leading-4">{t.desc}</div>
+                              <div className="text-xs text-[#57534E] mt-1 line-clamp-2">{t.habits.join(" · ")}</div>
+                              <div className="mt-2 text-xs font-medium inline-flex items-center gap-1">
+                                {isAdding ? "Добавляем…" : `+ ${t.habits.length} привычки`} <Plus className="h-3 w-3" />
+                              </div>
+                            </motion.button>
+                          )
+                        })}
+                      </div>
+                      <div className="text-xs text-[#A8A29E] text-center">Или создай свою первую привычку выше</div>
                     </div>
                   ) : (
-                    <div className="space-y-2 pt-1">
+                    <div className="space-y-3 pt-1">
                       <AnimatePresence>
                         {habits.map(h => {
                           const done = completedIds.includes(h.id)
@@ -372,6 +412,38 @@ export default function DashboardPage() {
                           )
                         })}
                       </AnimatePresence>
+                      <div className="pt-3 border-t border-[#F5F5F3]">
+                        <button onClick={() => setShowTemplates(!showTemplates)} className="w-full flex items-center justify-center gap-2 text-sm text-[#57534E] hover:text-[#0A0A0A] py-2">
+                          <Sparkles className="h-4 w-4" /> {showTemplates ? "Скрыть шаблоны" : "Шаблоны наборов"} <span className="text-xs bg-[#F5F5F3] border border-[#E7E5E4] rounded-full px-2 py-0.5">4</span>
+                        </button>
+                        <AnimatePresence>
+                          {showTemplates && (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="grid grid-cols-2 gap-2 mt-3 overflow-hidden">
+                              {TEMPLATES.map(t => {
+                                const Icon = t.icon
+                                const isAdding = addingTemplate === t.id
+                                return (
+                                  <motion.button
+                                    key={t.id}
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.97 }}
+                                    onClick={() => addTemplate([...t.habits], t.id)}
+                                    disabled={!!addingTemplate}
+                                    className={`text-left rounded-2xl border p-3 flex flex-col gap-1.5 ${t.color} hover:shadow-sm disabled:opacity-60`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span className="h-7 w-7 rounded-full bg-white border flex items-center justify-center"><Icon className="h-3.5 w-3.5" /></span>
+                                      <span className="text-sm font-medium">{t.label}</span>
+                                    </div>
+                                    <span className="text-xs text-[#737373] line-clamp-2">{t.habits.join(" · ")}</span>
+                                    <span className="text-xs font-medium">{isAdding ? "…" : `+ добавить`}</span>
+                                  </motion.button>
+                                )
+                              })}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     </div>
                   )}
                   <div className="h-1.5 bg-[#F5F5F3] rounded-full overflow-hidden"><div className="h-full bg-[#0A0A0A] transition-all" style={{ width: `${completion}%` }} /></div>
