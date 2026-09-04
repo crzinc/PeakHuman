@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useSupabaseData } from "@/lib/hooks/useSupabaseData"
 import { Plus, Check, Flame, Trash2, LogOut, Sparkles, Moon, Zap, Target, TrendingUp, Calendar, Award, Settings, Download, LayoutGrid } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
+import { motion, AnimatePresence } from "framer-motion"
 
 type Habit = { id: string; title: string }
 type DayEntry = { energy: number; sleep: number; focus: number; mood: number; note: string; peakScore: number; date: string }
@@ -273,9 +274,9 @@ export default function DashboardPage() {
               <Calendar className="h-3.5 w-3.5 text-[#A8A29E]" />
               <span className="capitalize text-[#57534E] font-medium">{todayLabel}</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-[#0A0A0A] text-white rounded-full px-3 py-1.5 text-xs font-medium">
-              <Flame className="h-3.5 w-3.5 text-orange-400" /> {streak} дней
-            </div>
+            <motion.div whileHover={{ scale: 1.04 }} className="flex items-center gap-1.5 bg-[#0A0A0A] text-white rounded-full px-3 py-1.5 text-xs font-medium">
+              <motion.span animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 1.8, repeat: Infinity }}><Flame className="h-3.5 w-3.5 text-orange-400" /></motion.span> {streak} дней
+            </motion.div>
             {isAuthed && <span className="hidden md:inline text-xs text-[#737373] max-w-[160px] truncate">{user?.email}</span>}
             <Button variant="ghost" size="sm" onClick={handleSignOut}><LogOut className="h-4 w-4 mr-1.5" />{isAuthed ? "Выйти" : "Войти"}</Button>
           </div>
@@ -295,13 +296,14 @@ export default function DashboardPage() {
         {tab === "today" ? (
           <div className="grid lg:grid-cols-12 gap-5">
             <div className="lg:col-span-5 space-y-5">
-              <Card className="overflow-hidden">
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+                <Card className="overflow-hidden">
                 <div className="p-6 md:p-7">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="text-xs tracking-widest uppercase text-[#A8A29E] font-semibold">Peak Score</div>
                       <div className="flex items-baseline gap-3 mt-2">
-                        <span className="text-5xl font-light tracking-tight">{hasSavedToday ? savedTodayPeak : todayPeak}</span>
+                        <motion.span key={hasSavedToday ? savedTodayPeak : todayPeak} initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 300 }} className="text-5xl font-light tracking-tight">{hasSavedToday ? savedTodayPeak : todayPeak}</motion.span>
                         <span className="text-sm text-[#737373]">/ 100</span>
                       </div>
                       <div className="text-sm text-[#57534E] mt-1">{hasSavedToday ? "Сохранено" : "Предпросмотр — сохрани день"}</div>
@@ -320,6 +322,7 @@ export default function DashboardPage() {
                   <span className="text-[#A8A29E]">{completedIds.length}/{habits.length}</span>
                 </div>
               </Card>
+              </motion.div>
 
               <Card>
                 <CardHeader className="pb-3">
@@ -342,16 +345,18 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="space-y-2 pt-1">
-                      {habits.map(h => {
-                        const done = completedIds.includes(h.id)
-                        return (
-                          <div key={h.id} className={cn("flex items-center gap-3 rounded-2xl border p-3", done ? "bg-[#0A0A0A] text-white border-[#0A0A0A]" : "bg-white border-[#E7E5E4]")}>
-                            <button onClick={() => toggleHabit(h.id)} className={cn("h-7 w-7 rounded-full border flex items-center justify-center shrink-0", done ? "bg-white text-[#0A0A0A] border-white" : "border-[#E7E5E4] bg-[#F5F5F3]")}>{done && <Check className="h-4 w-4" />}</button>
-                            <span className="text-sm font-medium flex-1">{h.title}</span>
-                            <button onClick={() => removeHabit(h.id)} className={cn("h-7 w-7 rounded-full flex items-center justify-center", done ? "hover:bg-white/10 text-white/70" : "hover:bg-[#F5F5F3] text-[#A8A29E]")}><Trash2 className="h-3.5 w-3.5" /></button>
-                          </div>
-                        )
-                      })}
+                      <AnimatePresence>
+                        {habits.map(h => {
+                          const done = completedIds.includes(h.id)
+                          return (
+                            <motion.div key={h.id} initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} whileHover={{ y: -1 }} className={cn("flex items-center gap-3 rounded-2xl border p-3", done ? "bg-[#0A0A0A] text-white border-[#0A0A0A]" : "bg-white border-[#E7E5E4]")}>
+                              <motion.button whileTap={{ scale: 0.88 }} onClick={() => toggleHabit(h.id)} className={cn("h-7 w-7 rounded-full border flex items-center justify-center shrink-0", done ? "bg-white text-[#0A0A0A] border-white" : "border-[#E7E5E4] bg-[#F5F5F3]")}>{done && <Check className="h-4 w-4" />}</motion.button>
+                              <span className="text-sm font-medium flex-1">{h.title}</span>
+                              <motion.button whileTap={{ scale: 0.9 }} onClick={() => removeHabit(h.id)} className={cn("h-7 w-7 rounded-full flex items-center justify-center", done ? "hover:bg-white/10 text-white/70" : "hover:bg-[#F5F5F3] text-[#A8A29E]")}><Trash2 className="h-3.5 w-3.5" /></motion.button>
+                            </motion.div>
+                          )
+                        })}
+                      </AnimatePresence>
                     </div>
                   )}
                   <div className="h-1.5 bg-[#F5F5F3] rounded-full overflow-hidden"><div className="h-full bg-[#0A0A0A] transition-all" style={{ width: `${completion}%` }} /></div>
