@@ -40,14 +40,15 @@ function detectDuration(prompt: string): number {
 function detectDomain(prompt: string): string {
   const l = prompt.toLowerCase()
   if (l.match(/английск|english|язык|b2|ielts/)) return "english"
-  if (l.match(/стартап|бизнес|продукт|запустить|saas|мвп/)) return "startup"
+  if (l.match(/прибыль|доход|заработ|выруч|продаж|клиент|монетизац/)) return "profit"
+  if (l.match(/стартап|бизнес|продукт|запустить|saas|мвп|идея/)) return "startup"
   if (l.match(/спорт|фитнес|трениров|похуд|мышц|бег|здоров/)) return "fitness"
   if (l.match(/код|программ|разработ|it |frontend|backend|python|js |react/)) return "code"
   if (l.match(/дизайн|ux|ui|figma/)) return "design"
   if (l.match(/книг|чтени|писател/)) return "reading"
   if (l.match(/медитац|осознан|mind|тревог|стресс/)) return "mind"
   if (l.match(/блог|контент|youtube|tiktok|инст/)) return "content"
-  if (l.match(/деньг|финанс|инвест|эконом/)) return "finance"
+  if (l.match(/деньг|финанс|инвест|эконом|капитал/)) return "finance"
   return "generic"
 }
 
@@ -112,6 +113,16 @@ const TEMPLATES: Record<string, { base: string; milestones: { title: string; des
       { title: "Съёмка и монтаж", desc: "Поток", checklist: ["Оборудование", "Шаблоны", "7 видео"] },
       { title: "Продвижение", desc: "Охват", checklist: ["Хештеги", "Коллабы", "Аналитика"] },
       { title: "Монетизация", desc: "Деньги", checklist: ["Продукт", "Воронка", "Продажи"] },
+    ],
+  },
+  profit: {
+    base: "Прибыль",
+    milestones: [
+      { title: "Ниша и оффер", desc: "Что продаём и кому", checklist: ["Выбрать нишу", "Сформулировать оффер", "Проверить спрос"] },
+      { title: "Продукт за 7 дней", desc: "Минимальная версия", checklist: ["Сделать MVP", "Лендинг", "Оплата"] },
+      { title: "Первые клиенты", desc: "До первой оплаты", checklist: ["20 холодных контактов", "3 демо", "1 оплата"] },
+      { title: "Выручка и юнит-экономика", desc: "Понять цифры", checklist: ["Себестоимость", "Цена", "Маржа"] },
+      { title: "Масштаб до прибыли", desc: "Повторить и усилить", checklist: ["Канал продаж", "Автоматизация", "Цель 3 мес"] },
     ],
   },
   finance: {
