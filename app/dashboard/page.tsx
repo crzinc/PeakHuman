@@ -98,15 +98,17 @@ export default function DashboardPage() {
     if (t) { setEnergy(t.energy); setSleep(t.sleep); setFocus(t.focus); setMood(t.mood); setNote(t.note) }
   }, [metricsMap, todayKey])
 
-  // seed default habits for new authed user
+  // seed default habits once for new users (не пересоздавать после удаления)
   useEffect(() => {
-    if (!isAuthed || authLoading || remoteHabits.length > 0) return
-    // create defaults silently
+    if (!isAuthed || authLoading || remoteHabits.length > 0 || !user) return
+    const key = `peakhuman:seeded:${user.id}`
+    if (localStorage.getItem(key)) return
     ;(async () => {
-      if (!supabase || !user) return
+      if (!supabase) return
       for (const title of DEFAULT_TITLES) {
         await supabase.from("habits").insert({ user_id: user.id, title })
       }
+      localStorage.setItem(key, "1")
       refresh()
     })()
   }, [isAuthed, authLoading, remoteHabits.length, supabase, user, refresh])
@@ -196,9 +198,14 @@ export default function DashboardPage() {
   }
 
   async function removeHabit(id: string) {
-    if (isAuthed && supabase) {
-      await supabase.from("habits").delete().eq("id", id)
-      refresh()
+    if (isAuthed && supabase && user) {
+      const { error } = await supabase.from("habits").delete().eq("id", id).eq("user_id", user.id)
+      if (error) {
+        console.error("habit delete", error.message)
+        alert("Не удалось удалить: " + error.message)
+        return
+      }
+      await refresh()
     } else {
       setLocalHabits(h => h.filter(x => x.id !== id))
       setLocalLogs(prev => { const c = { ...prev }; for (const k of Object.keys(c)) c[k] = c[k].filter(v => v !== id); return c })
