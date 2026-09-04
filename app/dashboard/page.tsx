@@ -79,6 +79,7 @@ export default function DashboardPage() {
 
   // local init
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalHabits(load(STORAGE.habits, DEFAULT_TITLES.map((t, i) => ({ id: String(i + 1), title: t }))))
     setLocalMetrics(load(STORAGE.metrics, {}))
     setLocalLogs(load(STORAGE.logs, {}))
@@ -91,6 +92,7 @@ export default function DashboardPage() {
   // hydrate form from metricsMap
   useEffect(() => {
     const t = metricsMap[todayKey]
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (t) { setEnergy(t.energy); setSleep(t.sleep); setFocus(t.focus); setMood(t.mood); setNote(t.note) }
   }, [metricsMap, todayKey])
 

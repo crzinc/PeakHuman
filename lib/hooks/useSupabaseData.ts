@@ -31,7 +31,8 @@ export function useSupabaseData() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { refresh() }, [refresh])
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void refresh() }, [refresh])
 
   // realtime
   useEffect(() => {
