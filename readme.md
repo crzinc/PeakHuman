@@ -11,16 +11,19 @@
 ## ✨ Что внутри
 
 - **Landing** — hero с живой превьюшкой дашборда, блоки System / How it works / Pricing
-- **Auth** — Supabase Auth (email+password) + middleware, демо-режим без ключей
-- **Dashboard**
-  - Peak Score (0–100) — взвешенная формула: энергия 30% + фокус 30% + сон 20% + привычки 20%
-  - Ежедневный чекин: энергия 1–10, сон 0–12ч, фокус 1–10, настроение 1–5, заметка
-  - Привычки: добавление, тоггл «выполнено сегодня», прогресс-бар, удаление
-  - Streak — серия дней с чекином
-  - График 7 дней (Recharts): Peak + энергия + фокус
-  - История, инсайты, сводка недели
-  - LocalStorage fallback — работает без Supabase; при наличии ключей — готов к синхронизации
-- **Supabase** — `profiles`, `habits`, `habit_logs`, `daily_metrics`, RLS, триггер автосоздания профиля
+- **Auth** — Supabase Auth (email+password) + middleware (защита `/dashboard`, автологин, `auth/callback`), fallback demo
+- **Dashboard** — гибрид Supabase + localStorage (realtime sync)
+  - **Peak Score** (0–100) — энергия 30% + фокус 30% + сон 20% + привычки 20%
+  - **Чекин 30 сек**: энергия 1–10, сон 0–12ч, фокус 1–10, настроение 1–5, заметка — `daily_metrics` upsert
+  - **Привычки**: создание/удаление (`habits`), тоггл на сегодня (`habit_logs`), прогресс, шаблоны (Фокус/Тело/Разум/База) для онбординга
+  - **Streak** — серия дней с чекином (90-дневный расчёт)
+  - **График 7/30 дней** (Recharts): Peak + энергия×10 + фокус×10, переключение диапазона
+  - **Календарь-heatmap 30 дней** — цвет по Peak, клик-подсказка с датой
+  - **История** — лента до 30 дней с бейджами пик/норм/спад
+  - **Умные инсайты**: корреляция сон→энергия/фокус, тренд недели, совет по привычкам
+  - **Экспорт**: CSV (метрики+привычки) из дашборда
+- **Settings** — профиль (`profiles.display_name`), экспорт JSON бэкапа, удаление всех данных, logout
+- **Supabase** — `profiles`, `habits`, `habit_logs`, `daily_metrics`, индексы + RLS + триггер автосоздания профиля
 
 ---
 
@@ -53,20 +56,21 @@ npm run dev
 
 ```
 app/
-  page.tsx              # landing
-  layout.tsx
-  globals.css
-  (auth)/login,signup   # auth
-  auth/callback/route.ts
-  dashboard/page.tsx    # главный экран (client, localStorage + chart)
+  page.tsx                    # landing
+  layout.tsx / globals.css
+  (auth)/login,signup         # auth (supabase)
+  auth/callback/route.ts      # OAuth/email confirm
+  dashboard/page.tsx          # гибрид Supabase+localStorage, heatmap, 7/30 chart
+  settings/page.tsx           # профиль, экспорт, удаление
 components/
-  ui/button,card,input,badge
+  ui/button,card,input,badge,slider
   landing-header.tsx
 lib/
-  utils.ts              # cn, calculatePeakScore
+  utils.ts                    # cn, calculatePeakScore, formatDate
+  hooks/useSupabaseData.ts    # realtime hook
   supabase/client,server,middleware
-supabase/schema.sql
-middleware.ts
+supabase/schema.sql           # RLS + триггеры
+middleware.ts                 # защита /dashboard, /settings
 ```
 
 ---
