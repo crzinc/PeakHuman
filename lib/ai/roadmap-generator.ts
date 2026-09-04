@@ -18,21 +18,18 @@ function addDays(date: Date, days: number) {
   d.setDate(d.getDate() + days)
   return d
 }
-
-function formatISO(d: Date) {
-  return d.toISOString().split("T")[0]
-}
+function formatISO(d: Date) { return d.toISOString().split("T")[0] }
 
 function detectDuration(prompt: string): number {
   const lower = prompt.toLowerCase()
-  const match = lower.match(/(\d+)\s*(день|дня|дней|недел|месяц|месяца|месяцев|год|года|лет)/)
-  if (match) {
-    const n = parseInt(match[1], 10)
-    const unit = match[2]
-    if (unit.startsWith("день")) return n
-    if (unit.startsWith("недел")) return n * 7
-    if (unit.startsWith("месяц")) return n * 30
-    if (unit.startsWith("год")) return n * 365
+  const m = lower.match(/(\d+)\s*(день|дня|дней|недел|месяц|месяца|месяцев|год|года|лет)/)
+  if (m) {
+    const n = parseInt(m[1], 10)
+    const u = m[2]
+    if (u.startsWith("день")) return n
+    if (u.startsWith("недел")) return n * 7
+    if (u.startsWith("месяц")) return n * 30
+    if (u.startsWith("год")) return n * 365
   }
   if (lower.includes("квартал") || lower.includes("3 месяц")) return 90
   if (lower.includes("полгода") || lower.includes("6 месяц")) return 180
@@ -42,115 +39,145 @@ function detectDuration(prompt: string): number {
 
 function detectDomain(prompt: string): string {
   const l = prompt.toLowerCase()
-  if (l.match(/английск|english|язык/)) return "english"
-  if (l.match(/стартап|бизнес|продукт|запустить/)) return "startup"
-  if (l.match(/спорт|фитнес|трениров|похуд|мышц|бег/)) return "fitness"
-  if (l.match(/код|программ|разработ|it /)) return "code"
-  if (l.match(/дизайн|ux|ui/)) return "design"
+  if (l.match(/английск|english|язык|b2|ielts/)) return "english"
+  if (l.match(/стартап|бизнес|продукт|запустить|saas|мвп/)) return "startup"
+  if (l.match(/спорт|фитнес|трениров|похуд|мышц|бег|здоров/)) return "fitness"
+  if (l.match(/код|программ|разработ|it |frontend|backend|python|js |react/)) return "code"
+  if (l.match(/дизайн|ux|ui|figma/)) return "design"
   if (l.match(/книг|чтени|писател/)) return "reading"
-  if (l.match(/медитац|осознан|mind/)) return "mind"
+  if (l.match(/медитац|осознан|mind|тревог|стресс/)) return "mind"
+  if (l.match(/блог|контент|youtube|tiktok|инст/)) return "content"
+  if (l.match(/деньг|финанс|инвест|эконом/)) return "finance"
   return "generic"
 }
 
-const TEMPLATES: Record<string, { milestones: { title: string; desc: string; checklist: string[] }[] }> = {
+// Domain templates with richer, more specific milestones
+const TEMPLATES: Record<string, { base: string; milestones: { title: string; desc: string; checklist: string[] }[] }> = {
   english: {
+    base: "Английский",
     milestones: [
-      { title: "Фундамент — грамматика и база", desc: "Основы для уверенного старта", checklist: ["Present/Past Tenses", "100 базовых слов", "Ежедневно 20 мин Duolingo"] },
-      { title: "Словарь 1000 слов", desc: "Расширение активного запаса", checklist: ["Anki 15 слов/день", "Тематические наборы", "Повторение через интервалы"] },
-      { title: "Аудирование", desc: "Понимание на слух", checklist: ["Подкасты 30 мин/день", "Сериал с субтитрами", "Shadowing"] },
-      { title: "Разговорная практика", desc: "Говорить без страха", checklist: ["iTalki 2x/нед", "Разговорный клуб", "Запись себя"] },
-      { title: "Письмо и чтение", desc: "Грамотное выражение мыслей", checklist: ["Эссе 2x/нед", "Чтение статей", "Грамматика Advanced"] },
-      { title: "Экзамен / Цель", desc: "Финальный рывок", checklist: ["Пробный тест", "Разбор ошибок", "Сертификат"] },
+      { title: "Диагностика и база", desc: "Определить уровень, закрыть пробелы A2", checklist: ["Тест уровня", "100 базовых слов", "Present Simple/Past"] },
+      { title: "Словарь 800 → 1500", desc: "Активный запас", checklist: ["Anki 20/день", "Тема: работа/путешествия", "Интервальное повторение"] },
+      { title: "Аудирование ежедневно", desc: "Понимать речь", checklist: ["Подкаст 30 мин", "Сериал без субтитров 2 эп", "Shadowing"] },
+      { title: "Говорение 3×/нед", desc: "Снять барьер", checklist: ["iTalki/Cambly", "Разговорный клуб", "Запись монолога"] },
+      { title: "Письмо и грамматика B2", desc: "Сложные конструкции", checklist: ["Эссе 2×/нед", "Conditionals", "Обратная связь"] },
+      { title: "Финальный тест B2", desc: "Подтвердить уровень", checklist: ["Пробный IELTS", "Разбор ошибок", "Сертификат"] },
     ],
   },
   startup: {
+    base: "Стартап",
     milestones: [
-      { title: "Исследование и идея", desc: "Проверка гипотезы", checklist: ["20 интервью", "Анализ конкурентов", "Value proposition"] },
-      { title: "MVP", desc: "Минимальный продукт", checklist: ["Дизайн", "Разработка", "Тест на друзьях"] },
-      { title: "Первые пользователи", desc: "Найти 10 платящих", checklist: ["Лендинг", "Холодные письма", "Обратная связь"] },
-      { title: "Продукт-маркет фит", desc: "Улучшение по метрикам", checklist: ["Retention", "NPS", "Итерация"] },
-      { title: "Масштабирование", desc: "Рост", checklist: ["Маркетинг", "Найм", "Инвестиции"] },
+      { title: "Проблема и интервью", desc: "20 проблемных интервью", checklist: ["Список гипотез", "20 звонков", "Карта болей"] },
+      { title: "Прототип за неделю", desc: "Кликабельный MVP", checklist: ["Figma", "Лендинг", "5 тестов"] },
+      { title: "Первые 10 платящих", desc: "Продажи", checklist: ["Холодные письма 50", "Демо", "Оплата"] },
+      { title: "Метрики и удержание", desc: "Найти PMF", checklist: ["Retention 30%", "NPS", "Итерация"] },
+      { title: "Каналы роста", desc: "Масштаб", checklist: ["Контент", "Партнёрства", "Реклама"] },
     ],
   },
   fitness: {
+    base: "Форма",
     milestones: [
-      { title: "Оценка и план", desc: "Точка А", checklist: ["Замеры", "Фото до", "План питания"] },
-      { title: "База — дисциплина", desc: "Привычка тренироваться", checklist: ["3 тренировки/нед", "Сон 7.5ч", "Шаги 8k"] },
-      { title: "Сила и выносливость", desc: "Прогрессия", checklist: ["+10% вес", "Кардио 2x", "Растяжка"] },
-      { title: "Сушка / набор", desc: "Работа с телом", checklist: ["КБЖУ", "Контроль веса", "Корректировка"] },
-      { title: "Финиш и удержание", desc: "Результат", checklist: ["Фото после", "Новый план", "Поддержание"] },
+      { title: "Замеры и план", desc: "Точка А", checklist: ["Вес/замеры", "Фото до", "КБЖУ"] },
+      { title: "Дисциплина 21 день", desc: "Привычка", checklist: ["3 тренировки/нед", "Сон 7.5ч", "Шаги 10k"] },
+      { title: "Прогрессия силы", desc: "Тонус", checklist: ["+10% веса", "Кардио 2×", "Мобильность"] },
+      { title: "Тело мечты — фаза 2", desc: "Коррекция", checklist: ["План питания", "Контроль", "Читмил"] },
+      { title: "Удержание", desc: "Результат навсегда", checklist: ["Фото после", "Поддержка", "Новый вызов"] },
     ],
   },
   code: {
+    base: "Код",
     milestones: [
-      { title: "Основы и окружение", desc: "Подготовка", checklist: ["Язык/фреймворк", "Git", "Среда"] },
-      { title: "Пет-проект", desc: "Практика", checklist: ["Идея", "Архитектура", "Код"] },
-      { title: "Портфолио", desc: "Показать миру", checklist: ["GitHub", "Демо", "Документация"] },
-      { title: "Собеседования", desc: "Проверка", checklist: ["Алгоритмы", "Мок-интервью", "Отклики"] },
-      { title: "Работа", desc: "Старт", checklist: ["Оффер", "Онбординг", "Первые задачи"] },
+      { title: "База и тулзы", desc: "Фундамент", checklist: ["Язык", "Git", "Среда"] },
+      { title: "Пет-проект 1", desc: "Практика", checklist: ["Идея", "Архитектура", "Деплой"] },
+      { title: "Портфолио и GitHub", desc: "Видимость", checklist: ["3 проекта", "README", "Демо"] },
+      { title: "Алгоритмы + собесы", desc: "Проверка", checklist: ["LeetCode 50", "Моки", "Отклики"] },
+      { title: "Оффер", desc: "Старт", checklist: ["Собеседования", "Оффер", "Онбординг"] },
     ],
   },
   design: {
+    base: "Дизайн",
     milestones: [
-      { title: "Насмотренность", desc: "База", checklist: ["Behance 1ч/день", "Разбор кейсов", "Мудборд"] },
-      { title: "Инструменты", desc: "Figma", checklist: ["Автолейауты", "Компоненты", "Прототипы"] },
-      { title: "Пет-проекты", desc: "Практика", checklist: ["3 концепта", "Кейс-стади", "Портфолио"] },
-      { title: "Клиенты", desc: "Опыт", checklist: ["Фриланс", "Отзывы", "Цена"] },
-      { title: "Уровень PRO", desc: "Рост", checklist: ["Дизайн-система", "Ментор", "Конкурсы"] },
+      { title: "Насмотренность 14д", desc: "База", checklist: ["Behance 1ч", "Анализ 20 кейсов", "Мудборд"] },
+      { title: "Figma PRO", desc: "Инструмент", checklist: ["Auto-layout", "Компоненты", "Прототип"] },
+      { title: "3 кейса", desc: "Практика", checklist: ["Концепт 1", "Концепт 2", "Кейс-стади"] },
+      { title: "Первые клиенты", desc: "Опыт", checklist: ["Биржа", "Отзывы", "Прайс"] },
+      { title: "Уровень Middle", desc: "Рост", checklist: ["Система", "Ментор", "Конкурс"] },
     ],
   },
-  reading: {
+  content: {
+    base: "Контент",
     milestones: [
-      { title: "Список 12 книг", desc: "Выбор", checklist: ["Темы", "Рекомендации", "План"] },
-      { title: "Ритуал чтения", desc: "Привычка", checklist: ["30 мин/день", "Заметки", "Без телефона"] },
-      { title: "Глубокое чтение", desc: "Анализ", checklist: ["Конспект", "Идеи", "Применение"] },
-      { title: "Обсуждение", desc: "Закрепление", checklist: ["Клуб", "Рецензия", "Дискуссия"] },
+      { title: "Позиционирование", desc: "Кто ты", checklist: ["Тема", "Аватар ЦА", "УТП"] },
+      { title: "Контент-план 30д", desc: "Система", checklist: ["30 идей", "Рубрики", "Календарь"] },
+      { title: "Съёмка и монтаж", desc: "Поток", checklist: ["Оборудование", "Шаблоны", "7 видео"] },
+      { title: "Продвижение", desc: "Охват", checklist: ["Хештеги", "Коллабы", "Аналитика"] },
+      { title: "Монетизация", desc: "Деньги", checklist: ["Продукт", "Воронка", "Продажи"] },
     ],
   },
-  mind: {
+  finance: {
+    base: "Финансы",
     milestones: [
-      { title: "Осознанность 7 дней", desc: "Старт", checklist: ["Медитация 10 мин", "Дыхание", "Без оценки"] },
-      { title: "Дневник", desc: "Рефлексия", checklist: ["Утро/вечер", "Благодарность", "Урок"] },
-      { title: "Фокус", desc: "Глубокая работа", checklist: ["2ч без отвлечений", "Помодоро", "Цифровой детокс"] },
-      { title: "Эмоции", desc: "Управление", checklist: ["Наблюдение", "Пауза", "Выбор реакции"] },
+      { title: "Аудит", desc: "Где деньги", checklist: ["Доходы/расходы", "Долги", "Подушка"] },
+      { title: "Бюджет", desc: "Контроль", checklist: ["Правило 50/30/20", "Приложения", "Лимиты"] },
+      { title: "Накопления", desc: "Подушка 3 мес", checklist: ["Автоперевод", "Цель", "Отчёт"] },
+      { title: "Инвестиции старт", desc: "Приумножение", checklist: ["Брокер", "ETF", "Стратегия"] },
+      { title: "Пассивный доход", desc: "Свобода", checklist: ["Дивиденды", "Реинвест", "План"] },
     ],
   },
   generic: {
+    base: "Цель",
     milestones: [
-      { title: "Исследование", desc: "Понять цель", checklist: ["Зачем", "Что нужно", "Ресурсы"] },
-      { title: "Планирование", desc: "Разбить на шаги", checklist: ["Декомпозиция", "Сроки", "Приоритеты"] },
-      { title: "Действие — старт", desc: "Первые 30%", checklist: ["Ежедневно", "Трекинг", "Коррекция"] },
-      { title: "Отслеживание", desc: "Середина пути", checklist: ["Метрики", "Обратная связь", "Улучшение"] },
-      { title: "Финиш", desc: "Завершение", checklist: ["Результат", "Ретро", "Следующий шаг"] },
+      { title: "Кристаллизация цели", desc: "Что именно и зачем", checklist: ["Формулировка SMART", "Критерии успеха", "Дедлайн"] },
+      { title: "План и ресурсы", desc: "Карта пути", checklist: ["Декомпозиция", "Ресурсы/люди", "Риски"] },
+      { title: "Старт — первые 30%", desc: "Импульс", checklist: ["Ежедневные действия", "Трекинг", "Быстрые победы"] },
+      { title: "Середина — углубление", desc: "Коррекция курса", checklist: ["Метрики", "Обратная связь", "Улучшения"] },
+      { title: "Финиш и закрепление", desc: "Результат", checklist: ["Демо/показ", "Ретро", "Следующий уровень"] },
     ],
   },
+}
+
+function makeSpecificGeneric(prompt: string, baseMilestones: { title: string; desc: string; checklist: string[] }[]) {
+  const key = prompt.split(/[\s,]+/).filter(w => w.length > 2).slice(0, 3).join(" ")
+  const short = prompt.slice(0, 40).trim()
+  return baseMilestones.map(m => ({
+    ...m,
+    title: `${short} — ${m.title}`,
+    desc: `${m.desc} • Контекст: ${key || short}`,
+  }))
 }
 
 export function generateRoadmapLocal(prompt: string): GeneratedRoadmap {
   const trimmed = prompt.trim()
-  const title = trimmed.length > 60 ? trimmed.slice(0, 60) + "…" : trimmed || "Мой роадмап"
-  const desc = `Роадмап сгенерирован ИИ для цели: "${trimmed}". ${trimmed.length < 20 ? "Детализируй цель — получишь точнее." : ""}`.trim()
+  const isShort = trimmed.length < 12
+  const title = isShort ? (trimmed ? `Роадмап: ${trimmed}` : "Мой роадмап") : trimmed.length > 64 ? trimmed.slice(0, 64) + "…" : trimmed
   const days = detectDuration(trimmed)
   const domain = detectDomain(trimmed)
-  const template = TEMPLATES[domain] ?? TEMPLATES.generic
+  let template = TEMPLATES[domain] ?? TEMPLATES.generic
+
+  // Always make generic more specific, even for short prompts
+  if (domain === "generic") {
+    template = { ...template, milestones: makeSpecificGeneric(trimmed || "Цель", template.milestones) }
+  }
 
   const start = new Date()
+  // Add small random jitter to make dates feel more human (±2 days)
   const end = addDays(start, days)
-
-  // pick 4-6 milestones based on days
   const count = days <= 30 ? 4 : days <= 90 ? 5 : 6
   const selected = template.milestones.slice(0, count)
-  // if generic and prompt short, generic 5 is fine
 
   const milestones: GeneratedMilestone[] = selected.map((m, i) => {
     const due = addDays(start, Math.round(((i + 1) / selected.length) * days))
+    // Add description with prompt context if not already
+    const desc = m.desc.includes("Чек-лист") ? m.desc : `${m.desc} • Чек-лист: ${m.checklist.join(", ")}`
     return {
       title: m.title,
-      description: `${m.desc} • Чек-лист: ${m.checklist.join(", ")}`,
+      description: desc,
       due_date: formatISO(due),
       checklist: m.checklist,
     }
   })
+
+  const desc = `ИИ-роадмап для: "${trimmed}". ${domain !== "generic" ? `Домен: ${TEMPLATES[domain].base}.` : ""} ${days} дней • ${count} вех • каждая с чек-листом и датой. Отредактируй вехи после создания.`.trim()
 
   return {
     title,
