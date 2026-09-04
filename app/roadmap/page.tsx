@@ -18,11 +18,9 @@ export default function RoadmapPage() {
   const { roadmaps, milestones, loading, createRoadmap, updateRoadmap, addMilestone, updateMilestone, toggleMilestone, deleteMilestone, deleteRoadmap, reorderMilestones } = useRoadmaps()
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
-  const [quarter, setQuarter] = useState("Q1 2026")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [color, setColor] = useState("#0A0A0A")
-  const [customPeriod, setCustomPeriod] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [editingRoadmap, setEditingRoadmap] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
@@ -40,23 +38,7 @@ export default function RoadmapPage() {
 
   function handleCreate() {
     if (!title.trim()) return
-    const q = customPeriod ? "custom" : quarter
-    const s = customPeriod ? (startDate || null) : null
-    const e = customPeriod ? (endDate || null) : null
-    // if not custom, derive dates from quarter
-    let sd = s, ed = e
-    if (!customPeriod) {
-      const map: Record<string, [string, string]> = {
-        "Q1 2026": ["2026-01-01", "2026-03-31"],
-        "Q2 2026": ["2026-04-01", "2026-06-30"],
-        "Q3 2026": ["2026-07-01", "2026-09-30"],
-        "Q4 2026": ["2026-10-01", "2026-12-31"],
-        "2026": ["2026-01-01", "2026-12-31"],
-        "90 дней": [new Date().toISOString().split("T")[0], new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0]],
-      }
-      if (map[quarter]) { sd = map[quarter][0]; ed = map[quarter][1] }
-    }
-    createRoadmap({ title, description: desc, quarter: q, start_date: sd, end_date: ed, color })
+    createRoadmap({ title, description: desc, quarter: "custom", start_date: startDate || null, end_date: endDate || null, color })
     setTitle(""); setDesc(""); setStartDate(""); setEndDate("")
   }
 
@@ -84,25 +66,13 @@ export default function RoadmapPage() {
         <Card className="p-6 mb-6">
           <div className="text-sm font-semibold flex items-center gap-2"><Target className="h-4 w-4" /> Новый роадмап — глубокая кастомизация</div>
           <div className="mt-4 grid gap-3">
-            <div className="grid sm:grid-cols-2 gap-3">
-              <Input placeholder="Напр. Выучить английский до B2" value={title} onChange={e => setTitle(e.target.value)} />
-              <div className="flex gap-2">
-                <select value={quarter} onChange={e => setQuarter(e.target.value)} disabled={customPeriod} className="flex-1 h-11 rounded-full border border-[#E7E5E4] bg-white px-4 text-sm disabled:opacity-50">
-                  <option>Q1 2026</option><option>Q2 2026</option><option>Q3 2026</option><option>Q4 2026</option><option>2026</option><option>90 дней</option>
-                </select>
-                <label className="flex items-center gap-1.5 text-xs border border-[#E7E5E4] rounded-full px-3 bg-[#F5F5F3] cursor-pointer">
-                  <input type="checkbox" checked={customPeriod} onChange={e => setCustomPeriod(e.target.checked)} /> кастом
-                </label>
-              </div>
-            </div>
+            <Input placeholder="Напр. Выучить английский до B2" value={title} onChange={e => setTitle(e.target.value)} />
             <Input placeholder="Описание (опционально) — зачем этот путь" value={desc} onChange={e => setDesc(e.target.value)} />
-            {customPeriod && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="grid sm:grid-cols-3 gap-3 overflow-hidden">
-                <div><label className="text-xs text-[#737373]">Старт</label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1" /></div>
-                <div><label className="text-xs text-[#737373]">Финиш</label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="mt-1" /></div>
-                <div><label className="text-xs text-[#737373]">Цвет</label><div className="flex gap-2 mt-1"><input type="color" value={color} onChange={e => setColor(e.target.value)} className="h-11 w-11 rounded-full border border-[#E7E5E4] p-1" /><span className="text-xs text-[#A8A29E] self-center">{color}</span></div></div>
-              </motion.div>
-            )}
+            <div className="grid sm:grid-cols-3 gap-3">
+              <div><label className="text-xs text-[#737373]">Старт</label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1" /></div>
+              <div><label className="text-xs text-[#737373]">Финиш</label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="mt-1" /></div>
+              <div><label className="text-xs text-[#737373]">Цвет</label><div className="flex gap-2 mt-1"><input type="color" value={color} onChange={e => setColor(e.target.value)} className="h-11 w-11 rounded-full border border-[#E7E5E4] p-1" /><span className="text-xs text-[#A8A29E] self-center">{color}</span></div></div>
+            </div>
             <Button onClick={handleCreate} className="gap-2 w-fit"><Plus className="h-4 w-4" /> Создать роадмап</Button>
           </div>
           {roadmaps.length === 0 && <div className="mt-4 text-sm text-[#737373] bg-[#F5F5F3] border border-dashed border-[#E7E5E4] rounded-2xl p-4">Пока пусто. Примеры: «Запустить продукт», «Форма к лету», «90 дней дисциплины». Создай первый — и добавь 3 вехи с датами.</div>}
@@ -137,7 +107,7 @@ export default function RoadmapPage() {
                           </div>
                         ) : (
                           <>
-                            <div className="font-semibold leading-tight flex items-center gap-2">{rm.title} <Badge className="text-xs bg-white border-[#E7E5E4]">{rm.quarter}</Badge></div>
+                            <div className="font-semibold leading-tight flex items-center gap-2">{rm.title} {rm.quarter && rm.quarter !== "custom" && <Badge className="text-xs bg-white border-[#E7E5E4]">{rm.quarter}</Badge>}</div>
                             {rm.description && <div className="text-sm text-[#57534E] mt-1">{rm.description}</div>}
                             <div className="text-xs text-[#737373] flex flex-wrap items-center gap-3 mt-2">
                               <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {formatDate(rm.start_date)} → {formatDate(rm.end_date)}</span>
