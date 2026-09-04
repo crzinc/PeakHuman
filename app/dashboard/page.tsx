@@ -222,6 +222,7 @@ export default function DashboardPage() {
   async function handleSignOut() {
     if (supabase) await supabase.auth.signOut()
     router.push("/login")
+    router.refresh()
   }
 
   function exportCSV() {

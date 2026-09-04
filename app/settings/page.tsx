@@ -57,6 +57,7 @@ export default function SettingsPage() {
   async function handleSignOut() {
     if (supabase) await supabase.auth.signOut()
     router.push("/")
+    router.refresh()
   }
 
   async function handleDelete() {

@@ -34,7 +34,9 @@ export async function updateSession(request: NextRequest) {
   }
   if (isAuth && isAuthPage) {
     const url = request.nextUrl.clone()
-    url.pathname = "/dashboard"
+    const next = request.nextUrl.searchParams.get("next")
+    url.pathname = next && next.startsWith("/") ? next : "/dashboard"
+    url.searchParams.delete("next")
     return NextResponse.redirect(url)
   }
   return supabaseResponse
