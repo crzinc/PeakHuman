@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge"
 import { cn, calculatePeakScore, getTodayKey } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { useSupabaseData } from "@/lib/hooks/useSupabaseData"
-import { Plus, Check, Flame, Trash2, LogOut, Sparkles, Moon, Zap, Target, TrendingUp, Calendar, Award, Settings, Download, LayoutGrid } from "lucide-react"
+import { Plus, Check, Flame, Trash2, LogOut, Sparkles, Moon, Zap, Target, TrendingUp, Calendar, Award, Settings, Download, LayoutGrid, Map } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
 import { motion, AnimatePresence } from "framer-motion"
+import { RitualCards } from "@/components/ritual-cards"
 
 type Habit = { id: string; title: string }
 type DayEntry = { energy: number; sleep: number; focus: number; mood: number; note: string; peakScore: number; date: string }
@@ -294,7 +295,14 @@ export default function DashboardPage() {
         </div>
 
         {tab === "today" ? (
-          <div className="grid lg:grid-cols-12 gap-5">
+          <>
+            <div className="mb-5">
+              <RitualCards />
+              <div className="mt-4 flex items-center gap-2">
+                <Link href="/roadmap" className="flex-1"><Card className="p-4 flex items-center gap-3 hover:shadow-md transition-shadow cursor-pointer"><div className="h-9 w-9 rounded-full bg-[#0A0A0A] text-white flex items-center justify-center"><Map className="h-4 w-4" /></div><div className="flex-1"><div className="text-sm font-semibold">Роадмап</div><div className="text-xs text-[#737373]">Собери путь на квартал — вехи, прогресс, динамика</div></div><Badge>открыть</Badge></Card></Link>
+              </div>
+            </div>
+            <div className="grid lg:grid-cols-12 gap-5">
             <div className="lg:col-span-5 space-y-5">
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
                 <Card className="overflow-hidden">
@@ -420,6 +428,7 @@ export default function DashboardPage() {
               </Card>
             </div>
           </div>
+          </>
         ) : (
           <div className="grid md:grid-cols-12 gap-5">
             <div className="md:col-span-8 space-y-3">
