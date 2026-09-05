@@ -126,9 +126,9 @@ export default function DashboardPage() {
     for (let i = 0; i < 90; i++) {
       const k = d.toISOString().split("T")[0]
       if (metricsMap[k]) s++
-      else if (i !== 0) break
+      else if (i > 0) break
       d.setDate(d.getDate() - 1)
-      if (i > 0 && !metricsMap[k]) break
+      if (!metricsMap[k] && i > 0) break
     }
     if (!metricsMap[todayKey] && completedIds.length > 0) s = Math.max(s, 1)
     return s || (metricsMap[todayKey] ? 1 : 0)

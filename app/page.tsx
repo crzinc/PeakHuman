@@ -220,15 +220,15 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative grid md:grid-cols-3 gap-4 text-sm">
-            {[
-              { title: "Приватно по умолчанию", desc: "Твои данные — только твои (RLS).", icon: "✓" },
-              { title: "Peak Score — честно", desc: "Взвешенная формула, без накруток.", icon: TrendingUp },
-              { title: "Начни за 10 секунд", desc: "Демо без регистрации.", icon: Sparkles },
+           <div className="relative grid md:grid-cols-3 gap-4 text-sm">
+              {[
+              { title: "Приватно по умолчанию", desc: "Твои данные — только твои (RLS).", iconEl: <Check className="h-4 w-4" /> },
+              { title: "Peak Score — честно", desc: "Взвешенная формула, без накруток.", iconEl: <TrendingUp className="h-4 w-4" /> },
+              { title: "Начни за 10 секунд", desc: "Демо без регистрации.", iconEl: <Sparkles className="h-4 w-4" /> },
             ].map((item, i) => (
               <motion.div key={item.title} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 + i * 0.06 }} className="bg-white text-[#0A0A0A] rounded-2xl p-5 flex items-center gap-3">
                 <div className="h-9 w-9 rounded-full bg-[#0A0A0A] text-white flex items-center justify-center shrink-0">
-                  {typeof item.icon === "string" ? "✓" : <TrendingUp className="h-4 w-4" />}
+                  {item.iconEl}
                 </div>
                 <div><div className="font-medium">{item.title}</div><div className="text-xs text-[#57534E]">{item.desc}</div></div>
               </motion.div>
