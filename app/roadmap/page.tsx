@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useRoadmaps } from "@/lib/hooks/useRoadmaps"
-import { ArrowLeft, Map, Plus, Check, Trash2, Target, Calendar, TrendingUp, Edit3, GripVertical, X, Save, Clock, Sparkles, Wand2, Brain } from "lucide-react"
+import { ArrowLeft, Map, Plus, Check, Trash2, Target, Calendar, TrendingUp, Edit3, GripVertical, X, Save, Clock } from "lucide-react"
 
 function formatDate(d: string | null) {
   if (!d) return "—"
@@ -21,11 +21,6 @@ export default function RoadmapPage() {
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [color, setColor] = useState("#0A0A0A")
-  // AI
-  const [aiPrompt, setAiPrompt] = useState("")
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiPreview, setAiPreview] = useState<null | { title: string; description: string; start_date: string; end_date: string; milestones: { title: string; description: string; due_date: string; checklist: string[] }[] }>(null)
-  const [aiError, setAiError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [editingRoadmap, setEditingRoadmap] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
@@ -45,59 +40,6 @@ export default function RoadmapPage() {
     if (!title.trim()) return
     createRoadmap({ title, description: desc, quarter: "custom", start_date: startDate || null, end_date: endDate || null, color })
     setTitle(""); setDesc(""); setStartDate(""); setEndDate("")
-  }
-
-  async function handleAiGenerate() {
-    if (!aiPrompt.trim()) { setAiError("Опиши цель, напр. 'Выучить английский до B2 за 3 месяца'"); return }
-    setAiLoading(true); setAiError(null); setAiPreview(null)
-    try {
-      const res = await fetch("/api/ai/roadmap", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: aiPrompt.trim() }) })
-      const j = await res.json()
-      if (!res.ok) throw new Error(j.error || "ошибка")
-      setAiPreview(j.roadmap)
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : "Ошибка генерации")
-    } finally { setAiLoading(false) }
-  }
-
-  async function handleAiCreate() {
-    if (!aiPreview) return
-    // Create roadmap with AI data, then milestones
-    const { createClient } = await import("@/lib/supabase/client")
-    const supabase = createClient()
-    if (supabase) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: rm, error } = await supabase.from("roadmaps").insert({ user_id: user.id, title: aiPreview.title, description: aiPreview.description, quarter: "custom", start_date: aiPreview.start_date, end_date: aiPreview.end_date, color: "#7C3AED", status: "active" }).select().single()
-        if (error) {
-          // fallback without dates if migration not run
-          const { data: rm2, error: e2 } = await supabase.from("roadmaps").insert({ user_id: user.id, title: aiPreview.title, description: aiPreview.description, quarter: "custom", status: "active", color: "#7C3AED" }).select().single()
-          if (e2) { setAiError(e2.message); return }
-          for (let i = 0; i < aiPreview.milestones.length; i++) {
-            const m = aiPreview.milestones[i]
-            await supabase.from("milestones").insert({ roadmap_id: rm2.id, user_id: user.id, title: m.title, description: m.description, due_date: m.due_date, order_index: i })
-          }
-        } else {
-          for (let i = 0; i < aiPreview.milestones.length; i++) {
-            const m = aiPreview.milestones[i]
-            await supabase.from("milestones").insert({ roadmap_id: rm.id, user_id: user.id, title: m.title, description: m.description, due_date: m.due_date, order_index: i })
-          }
-        }
-        setAiPreview(null); setAiPrompt("")
-        // refresh via reload
-        location.reload()
-        return
-      }
-    }
-    // local fallback
-    createRoadmap({ title: aiPreview.title, description: aiPreview.description, quarter: "custom", start_date: aiPreview.start_date, end_date: aiPreview.end_date, color: "#7C3AED" })
-    setTimeout(() => {
-      // find newly created roadmap (last)
-      const last = roadmaps[roadmaps.length - 1]
-      // if not found due to async, just add milestones locally after delay
-      aiPreview.milestones.forEach(m => addMilestone(last?.id ?? roadmaps[0]?.id ?? "", m.title))
-    }, 400)
-    setAiPreview(null); setAiPrompt("")
   }
 
   return (
@@ -120,48 +62,6 @@ export default function RoadmapPage() {
             <TrendingUp className="h-3.5 w-3.5" /> {roadmaps.length} роадмапов · {milestones.filter(m => m.completed).length}/{milestones.length} вех
           </div>
         </div>
-
-        <Card className="p-6 mb-6 border-violet-200 bg-gradient-to-br from-violet-50 to-white overflow-hidden relative">
-          <div className="absolute -right-12 -top-12 h-32 w-32 bg-violet-200/40 rounded-full blur-2xl" />
-          <div className="relative">
-            <div className="text-sm font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-600" /> ИИ-генератор роадмапа — бесплатно <Badge className="bg-violet-600 text-white border-violet-600">free AI</Badge></div>
-            <p className="text-xs text-[#737373] mt-1">Опиши цель — ИИ создаст роадмап с чек-листами и датами. Работает без ключей, локально. С <code className="bg-white border border-[#E7E5E4] rounded px-1">GROQ/OpenRouter</code> — ещё умнее.</p>
-            <div className="mt-4 flex flex-col sm:flex-row gap-3">
-              <Input placeholder="Напр. Хочу выучить английский до B2 за 3 месяца, упор на разговор" value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAiGenerate()} className="flex-1 bg-white" />
-              <Button onClick={handleAiGenerate} disabled={aiLoading || !aiPrompt.trim()} className="gap-2 bg-violet-600 hover:bg-violet-700 text-white shrink-0"><Wand2 className="h-4 w-4" /> {aiLoading ? "Генерируем…" : "Сгенерировать"}</Button>
-            </div>
-            {aiError && <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{aiError}</div>}
-            <AnimatePresence>
-              {aiPreview && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4 rounded-2xl border border-violet-200 bg-white p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-semibold flex items-center gap-2"><Brain className="h-4 w-4 text-violet-600" /> {aiPreview.title}</div>
-                      <div className="text-sm text-[#57534E] mt-1">{aiPreview.description}</div>
-                      <div className="text-xs text-[#737373] mt-1 flex items-center gap-2"><Calendar className="h-3 w-3" /> {formatDate(aiPreview.start_date)} → {formatDate(aiPreview.end_date)} · {aiPreview.milestones.length} вех</div>
-                    </div>
-                    <Button size="sm" onClick={handleAiCreate} className="bg-violet-600 hover:bg-violet-700 gap-1 shrink-0"><Plus className="h-3.5 w-3.5" /> Создать этот роадмап</Button>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {aiPreview.milestones.map((m, i) => (
-                      <div key={i} className="rounded-xl border border-[#E7E5E4] bg-[#F5F5F3] p-3">
-                        <div className="text-sm font-medium flex items-center gap-2">{i + 1}. {m.title} <span className="text-xs text-[#A8A29E] ml-auto">{formatDate(m.due_date)}</span></div>
-                        <div className="text-xs text-[#57534E] mt-1">{m.description}</div>
-                        <div className="mt-1.5 flex flex-wrap gap-1">
-                          {m.checklist.map((c, j) => <span key={j} className="text-xs bg-white border border-[#E7E5E4] rounded-full px-2 py-0.5">{c}</span>)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => setAiPreview(null)}>Отмена</Button>
-                    <span className="text-xs text-[#A8A29E] self-center">Проверь — можно отредактировать после создания</span>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </Card>
 
         <Card className="p-6 mb-6">
           <div className="text-sm font-semibold flex items-center gap-2"><Target className="h-4 w-4" /> Новый роадмап — глубокая кастомизация</div>
